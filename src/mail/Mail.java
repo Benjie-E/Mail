@@ -9,6 +9,11 @@ import java.awt.BorderLayout;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.RED;
 import java.awt.GridLayout;
+import java.awt.PopupMenu;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -25,13 +30,21 @@ import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
 /**
@@ -47,52 +60,168 @@ public class Mail implements Serializable{
     Mail(){
 	
     }
+
+    private class ClickListener implements ActionListener{
+
+	public ClickListener() {
+	    
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+	    //System.out.println(mailSender.getComponent(1));
+	    //System.out.println(e.getSource());
+	    //System.out.println(((JButton)e.getSource()).getParent());
+	    if(e.getActionCommand() == "Send"){
+		CreateEmailFrame source = (CreateEmailFrame) ((JButton)e.getSource()).getParent().getParent().getParent().getParent();
+		Email writing = new Email();
+		try{
+		writing.content = source.mailContent.getText();
+		writing.dateSent = new Date();
+		writing.priority = Integer.parseInt(source.mailPriority.getText());
+		writing.subject = source.mailSubject.getText();
+		writing.sender = source.mailSender.getText();
+		writing.receiver = source.mailReceiver.getText();
+		try {
+		    addToFile(writing);
+		    source.dispose();
+		    
+		} catch (IOException ex) {
+		    Logger.getLogger(Mail.class.getName()).log(Level.SEVERE, null, ex);
+		}
+		}catch(Exception ex){
+		    System.out.println(ex);
+		}
+	    }
+	}
+
+    }
+
+    private class NewEmailListener implements ActionListener {
+	    
+	public NewEmailListener() {
+	    
+	}
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+	    try {
+		new CreateEmailFrame();
+	    } catch (IOException ex) {
+		Logger.getLogger(Mail.class.getName()).log(Level.SEVERE, null, ex);
+	    } catch (ClassNotFoundException ex) {
+		Logger.getLogger(Mail.class.getName()).log(Level.SEVERE, null, ex);
+	    }
+	}
+    }
+    class CreateEmailFrame extends JFrame{
+	private int height=300;
+	private int width=500;
+	private String title="test";
+	
+
+	
+	    EmailCreationBox mailSender;
+	    EmailCreationBox mailReceiver;
+	    EmailCreationBox mailSubject;
+	    EmailCreationBox mailPriority;
+	    EmailCreationBox mailContent;
+	CreateEmailFrame() throws IOException, FileNotFoundException, ClassNotFoundException{
+		mailSender = new EmailCreationBox("Sender");
+		mailReceiver = new EmailCreationBox("Receiver");
+		mailSubject = new EmailCreationBox("Subject");
+		mailPriority = new EmailCreationBox("Priority");
+		mailContent = new EmailCreationBox("Content");
+	    setSize(width,height);
+	    setLayout(new BoxLayout(getContentPane(),BoxLayout.Y_AXIS));
+	    setTitle(title);
+	    add(mailSender);
+	    add(mailReceiver);
+	    add(mailSubject);
+	    add(mailPriority);
+	    add(mailContent);
+	    JButton send = new JButton("Send");
+	    ClickListener listener = new ClickListener();
+	    send.addActionListener(listener);
+	    add(send);
+	    setVisible(true);
+	}
+    }
+    class EmailCreationBox extends JPanel{
+	JTextField field;
+	EmailCreationBox(String type){
+	    setSize(20,300);
+	    add(new JLabel(type));
+	    field = new JTextField(40);
+	    add(field);
+	}
+	private String getText(){
+	    return field.getText();
+	}
+    }
     class GUI extends JFrame{
 	private int height=400;
 	private int width=400;
 	private String title="Email";
+	private int mailLength;
 	GUI() throws IOException, FileNotFoundException, ClassNotFoundException{
+	    JMenuBar menuBar = new JMenuBar();     
+	    setJMenuBar(menuBar);
+	    menuBar.add(createFileMenu());
 	    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	    setTitle(title);
 	    setSize(width,height);
-	    setLayout(new GridLayout(10,5));
-	    add(new SortBar());
+	    setLayout(new BoxLayout(getContentPane(),BoxLayout.Y_AXIS));
+	    add(new SortPanel());
 	    add(emailList());
-	    System.out.println(this.getLayout());
+	    //System.out.println(this.getLayout());
 	    setVisible(true);
 	    
+	    }
     }
 	private JPanel emailList() throws IOException, FileNotFoundException, ClassNotFoundException{
 	    List<Email> emails = load();
 	    JPanel panel = new JPanel();
+	    panel.setLayout(new BoxLayout(panel,1));
 	    for(Email em:emails){
 		EmailPanel ep = new EmailPanel(em);
-		ep.panel();
 		panel.add(ep);
 	    }
 	    return panel;
 	}
+
+	private JMenuItem createFileMenu() {
+      JMenuItem newItem = new JMenuItem("New");      
+      ActionListener listener = new NewEmailListener();
+      newItem.addActionListener(listener);
+      return newItem;
+	}
+    private JMenuBar menuBar(){
+	return null;
+	
     }
-    private class SortBar extends JPanel{
+    private class SortPanel extends JPanel{
 	private SortItem date;
 	private SortItem sender;
 	private SortItem receiver;
 	private SortItem subject;
 	private SortItem priority;
-	SortBar(){
+	SortPanel(){
 	    setSize(50,50);
-	    setLayout(new GridLayout(1,5));
+	    setLayout(new BoxLayout(this,BoxLayout.X_AXIS));
 	    date = new SortItem("Date");
 	    sender = new SortItem("Sender");
 	    receiver = new SortItem("Receiver");
 	    subject = new SortItem("Subject");
 	    priority = new SortItem("Priority");
 	    
-	    add(date);
-	    add(sender);
-	    add(receiver);
-	    add(subject);
+	    add(new JCheckBox());
 	    add(priority);
+	    add(sender);
+	    add(subject);
+	    add(date);
+	    add(receiver);
+	    
 	}
 	
     }
@@ -103,34 +232,25 @@ public class Mail implements Serializable{
 	}
     }
     private class EmailPanel extends JPanel{
-	private final int priority;
-	private final String subject;
-	private final String receiver;
-	private final String sender;
-	private final String dateSent;
-	private final boolean checked;
+	private SortItem date;
+	private SortItem sender;
+	private SortItem receiver;
+	private SortItem subject;
+	private SortItem priority;
 	EmailPanel(Email e){
-	    priority = e.priority;
-	    subject = e.subject;
-	    receiver = e.receiver;
-	    sender = e.sender;
-	    dateSent = e.dateSent;
-	    checked = false;
-	}
-	private void panel(){
+	    setSize(50,50);
+	    setLayout(new BoxLayout(this,BoxLayout.X_AXIS));
 	    
-	    setLayout(new GridLayout(1,5));
-	    
-	    setBorder(new LineBorder(BLACK));
 	    add(new JCheckBox());
-	    add(new SortItem(subject));
-	    add(new SortItem(receiver));
-	    add(new SortItem(sender));
-	    add(new SortItem(dateSent));
+	    add(new SortItem(Integer.toString(e.priority)));
+	    add(new SortItem(e.sender));
+	    add(new SortItem(e.subject));
+	    add(new SortItem(e.dateSent.toString()));
+	    add(new SortItem(e.receiver));
 	}
 	
     }
-    class Mailbox implements Serializable{
+    static class Mailbox extends ArrayList implements Serializable{
 	public List<Email> emails;
 	private File fileName;
 	Mailbox() throws IOException, FileNotFoundException, ClassNotFoundException{
@@ -144,7 +264,7 @@ public class Mail implements Serializable{
 	}
     }
     class Email implements Serializable{
-	private String dateSent;
+	private Date dateSent;
 	private String sender;
 	private int priority;
 	private String subject;
@@ -157,7 +277,7 @@ public class Mail implements Serializable{
 	Email m = new Email();
 	m.content="this is a test";
 	m.sender="human@email.com";
-	m.dateSent="day";
+	m.dateSent=new Date();
 	m.priority=4;
 	m.receiver="you";
 	m.subject="test";
@@ -176,40 +296,39 @@ public class Mail implements Serializable{
     private static List<Email> pullFromFile(File input) throws FileNotFoundException, IOException, ClassNotFoundException{
 	if(!input.exists()){
 	    input.createNewFile();
-	}
+	}else{
+	    try{
 	InputStream file = new FileInputStream(input);
 	List<Email> emails = new ArrayList();
 	ObjectInputStream in = new ObjectInputStream(file);
-	try{
 	    emails.add((Email) in.readObject());
-	    
 	    return emails;
-	}catch(Exception e){
-	    System.out.println(e);
-	    return Collections.EMPTY_LIST;
+	    }catch(Exception e){
+		return Collections.EMPTY_LIST;
+	    }
 	}
-	
-	
-
-	
-	
+	return Collections.EMPTY_LIST;
     }
     private static void newFile() throws FileNotFoundException, IOException{
-	System.out.println("none");
+	//System.out.println("none");
 	File output = new File("input.bin");
 	output.createNewFile();
     }
-    private static void writeToFile(Email m) throws FileNotFoundException, IOException{
-	ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("input.bin"));
-	out.writeObject(m);
+    private static void addToFile(Email m) throws IOException{
+	ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("input.bin",true));
+	writeToFile(m,out);
 	out.close();
+    }
+    private static void writeToFile(Email m,ObjectOutputStream out) throws FileNotFoundException, IOException{
+	
+	out.writeObject(m);
 	
 	
     }
     private void testWrite() throws FileNotFoundException, IOException{
 	Email createEmail = createEmail();
 	//System.out.println(createEmail);
-	writeToFile(createEmail);
+	//writeToFile(createEmail);
     }
     /**
      * @param args the command line arguments
@@ -221,7 +340,7 @@ public class Mail implements Serializable{
     public static void main(String[] args) throws FileNotFoundException, IOException, URISyntaxException, ClassNotFoundException {
 	// TODO code application logic here
 	Mail m = new Mail();
-	m.testWrite();
+	//m.testWrite();
 	//m.load();
 	m.emailGui();
 	//m.createEmail();
